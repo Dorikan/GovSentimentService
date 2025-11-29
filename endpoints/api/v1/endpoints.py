@@ -43,11 +43,11 @@ class PredictionResponse(BaseModel):
 def map_sentiment_to_int(sentiment: str) -> int:
     s = sentiment.lower().strip()
     if s == "отрицательно":
-        return 0
-    elif s == "положительно":
         return 2
+    elif s == "положительно":
+        return 1
     else:
-        return 1  # нейтрально or unknown
+        return 0
 
 
 @router.post("/predict", response_model=PredictionResponse)
