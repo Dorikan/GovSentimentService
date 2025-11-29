@@ -9,7 +9,7 @@ services:
     volumes:
       - ./models:/models
 
-    command: -m /models/model.gguf --host 0.0.0.0 --port 8080 --n-gpu-layers 0 --ctx-size 4096
+    command: -m /models/${LLM_NAME} --host 0.0.0.0 --port 8080 --n-gpu-layers 0 --ctx-size 4096
 
     restart: unless-stopped
 
