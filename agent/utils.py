@@ -215,4 +215,25 @@ def parse_ideas(response: AIMessage) -> list[dict[str, Any]]:
         raise ValueError(f"Ideas parsing error: {e}") from e
 
 
+def parse_overall_sentiments(response: AIMessage) -> list[dict[str, Any]]:
+    valid_sentiments = {"положительно", "нейтрально", "отрицательно"}
+    try:
+        data = _extract_json_data(response)
+        reviews = sorted(data.get("reviews", []), key=lambda x: x.get("review_id", 0))
+
+        result = []
+        for review in reviews:
+            review_id = review.get("review_id")
+            overall = review.get("overall", "нейтрально").lower().strip()
+            if overall not in valid_sentiments:
+                overall = "нейтрально"
+            
+            # Return dict with id and overall sentiment
+            result.append({"id": review_id, "overall": overall})
+        return result
+    except Exception as e:
+        raise ValueError(f"Overall sentiment parsing error: {e}") from e
+
+
+
 llm_client = LLM()

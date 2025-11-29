@@ -107,3 +107,43 @@ async def predict_reviews(request: PredictionRequest):
         return PredictionResponse(reviews=transformed_reviews, ideas=transformed_ideas)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+
+@router.post("/predict/sentiment", response_model=PredictionResponse)
+async def predict_reviews_sentiment_only(request: PredictionRequest):
+    """
+    Эндпоинт для оценки только тональности отзывов.
+    Принимает список отзывов с ID, возвращает общую тональность.
+    Категории и идеи будут пустыми.
+    """
+    if not request.reviews:
+        raise HTTPException(status_code=400, detail="List of reviews cannot be empty")
+
+    # Convert Pydantic models to list of dicts for the service
+    reviews_dicts = [r.model_dump() for r in request.reviews]
+
+    try:
+        sentiments_map = await prediction_service.predict_sentiment_only(
+            reviews=reviews_dicts
+        )
+
+        # Transform reviews
+        transformed_reviews = []
+        for review_id, overall_str in sentiments_map.items():
+            overall_val = map_sentiment_to_int(overall_str)
+
+            transformed_reviews.append(
+                ReviewResponse(
+                    id=review_id,
+                    categories=[], # Empty categories
+                    overall=overall_val
+                )
+            )
+
+        # Empty ideas
+        transformed_ideas = []
+
+        return PredictionResponse(reviews=transformed_reviews, ideas=transformed_ideas)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sentiment prediction failed: {str(e)}")
+
