@@ -13,7 +13,19 @@ class ReviewItem(BaseModel):
     text: str
 
 
-class IdeaItem(BaseModel):
+class CategorySentiment(BaseModel):
+    name: str
+    sentiment: int
+
+
+class ReviewResponse(BaseModel):
+    id: int
+    categories: List[CategorySentiment]
+    overall: int
+
+
+class IdeaResponse(BaseModel):
+    category: str
     description: str
     source_ids: List[int]
 
@@ -24,8 +36,18 @@ class PredictionRequest(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    reviews: Dict[int, Dict[str, str]]
-    ideas: Dict[str, List[IdeaItem]]
+    reviews: List[ReviewResponse]
+    ideas: List[IdeaResponse]
+
+
+def map_sentiment_to_int(sentiment: str) -> int:
+    s = sentiment.lower().strip()
+    if s == "отрицательно":
+        return 0
+    elif s == "положительно":
+        return 2
+    else:
+        return 1  # нейтрально or unknown
 
 
 @router.post("/predict", response_model=PredictionResponse)
@@ -45,6 +67,43 @@ async def predict_reviews(request: PredictionRequest):
             reviews=reviews_dicts,
             use_few_shot=request.use_few_shot
         )
-        return PredictionResponse(reviews=reviews_map, ideas=ideas_map)
+
+        # Transform reviews
+        transformed_reviews = []
+        for review_id, sentiments_data in reviews_map.items():
+            # Extract overall sentiment
+            overall_str = sentiments_data.pop("overall", "нейтрально")
+            overall_val = map_sentiment_to_int(overall_str)
+
+            categories_list = []
+            for cat_name, sent_str in sentiments_data.items():
+                categories_list.append(
+                    CategorySentiment(
+                        name=cat_name,
+                        sentiment=map_sentiment_to_int(sent_str)
+                    )
+                )
+
+            transformed_reviews.append(
+                ReviewResponse(
+                    id=review_id,
+                    categories=categories_list,
+                    overall=overall_val
+                )
+            )
+
+        # Transform ideas
+        transformed_ideas = []
+        for category, ideas_list in ideas_map.items():
+            for idea in ideas_list:
+                transformed_ideas.append(
+                    IdeaResponse(
+                        category=category,
+                        description=idea.get("description", ""),
+                        source_ids=idea.get("source_ids", [])
+                    )
+                )
+
+        return PredictionResponse(reviews=transformed_reviews, ideas=transformed_ideas)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
