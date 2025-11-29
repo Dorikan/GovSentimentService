@@ -1,0 +1,10 @@
+langgraph
+tenacity
+langchain-core
+langchain-openai
+pydantic-settings
+python-dotenv
+pytest
+pytest-asyncio
+fastapi
+uvicorn

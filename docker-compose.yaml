@@ -1,0 +1,29 @@
+services:
+  llm-cpu-server:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: llm_cpu_server
+
+    ports:
+      - "50002:8080"
+
+    volumes:
+      - ./models:/models
+
+    command: -m /models/model.gguf --host 0.0.0.0 --port 8080 --n-gpu-layers 0 --ctx-size 4096
+
+    restart: unless-stopped
+
+  sentiment-service:
+    build: .
+    container_name: sentiment_service
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+
+    depends_on:
+      - llm-cpu-server
+
+    restart: unless-stopped
