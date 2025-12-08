@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from endpoints import api_prediction_router
+from src.endpoints import api_prediction_router
 
 app = FastAPI(title="ML Service", version="1.0")
 

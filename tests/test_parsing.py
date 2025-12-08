@@ -1,6 +1,6 @@
 import pytest
 from langchain_core.messages import AIMessage
-from agent.utils import parse_review_sentiments, parse_ideas
+from src.agent.utils import parse_review_sentiments, parse_ideas
 
 def test_parse_sentiments_with_overall():
     json_content = """
@@ -20,9 +20,7 @@ def test_parse_sentiments_with_overall():
     result = parse_review_sentiments(response)
     
     assert len(result) == 1
-    assert result[0]["Transport"] == "нейтрально" # "negative" not in valid set (russian), so defaults to neutral?
-    # Wait, valid sentiments are russian: положительно, нейтрально, отрицательно.
-    # Let's fix the test data to be Russian.
+    assert result[0]["sentiments"]["Transport"] == "нейтрально"
 
 def test_parse_sentiments_with_overall_russian():
     json_content = """
@@ -42,8 +40,8 @@ def test_parse_sentiments_with_overall_russian():
     result = parse_review_sentiments(response)
     
     assert len(result) == 1
-    assert result[0]["Транспорт"] == "отрицательно"
-    assert result[0]["overall"] == "отрицательно"
+    assert result[0]["sentiments"]["Транспорт"] == "отрицательно"
+    assert result[0]["sentiments"]["overall"] == "отрицательно"
 
 def test_parse_ideas_new_format():
     json_content = """
@@ -71,8 +69,8 @@ def test_parse_ideas_new_format():
     assert len(result) == 1
     assert result[0]["category"] == "Транспорт"
     assert len(result[0]["ideas"]) == 2
-    assert "Починить автобус" in result[0]["ideas"]
-    assert "Уволить водителя" in result[0]["ideas"]
+    assert "Починить автобус" in result[0]["ideas"][0]['description']
+    assert "Уволить водителя" in result[0]["ideas"][1]['description']
 
 def test_parse_ideas_fallback():
     # Test backward compatibility

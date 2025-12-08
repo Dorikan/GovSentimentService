@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from services.prediction_service import PredictionService
-from settings import settings
+from src.services.prediction_service import PredictionService
+from src.settings import settings
 
 @pytest.fixture
 def prediction_service():
@@ -69,40 +69,46 @@ async def test_predict_realistic_scenario(prediction_service):
             "ideas": ideas
         }
 
-    # Patch the agent
-    with patch("services.prediction_service.classification_agent") as mock_agent:
-        mock_agent.ainvoke = AsyncMock(side_effect=mock_ainvoke)
+    # Create mock agent
+    mock_agent = MagicMock()
+    mock_agent.ainvoke = AsyncMock(side_effect=mock_ainvoke)
+
+    # Inject mock agent
+    prediction_service = PredictionService(agent=mock_agent)
         
-        # Run prediction
-        reviews_map, ideas_map = await prediction_service.predict(reviews)
+    # Run prediction
+    reviews_map, ideas_map = await prediction_service.predict(reviews)
         
-        # Verify batch calls
-        # 5 reviews, batch size 2 -> 3 calls (2, 2, 1)
-        assert mock_agent.ainvoke.call_count == 3
+    # Verify batch calls
+    # 5 reviews, batch size 2 -> 3 calls (2, 2, 1)
+    assert mock_agent.ainvoke.call_count == 3
         
-        # Verify results aggregation
-        assert len(reviews_map) == 5
-        
-        # Check specific reviews by ID
-        # Review 101: Bus
-        assert reviews_map[101]["Транспорт"] == "отрицательно"
-        
-        # Review 102: Clinic (mixed)
-        assert reviews_map[102]["Здравоохранение"] == "положительно"
-        
-        # Verify ideas aggregation
-        assert "Транспорт" in ideas_map
-        assert ideas_map["Транспорт"][0]["description"] == "Увеличить частоту движения автобуса 55"
-        assert ideas_map["Транспорт"][0]["source_ids"] == [101]
-        
-        assert "ЖКХ" in ideas_map
-        assert ideas_map["ЖКХ"][0]["description"] == "Обеспечить регулярный вывоз мусора по ул. Ленина, 5"
-        assert ideas_map["ЖКХ"][0]["source_ids"] == [105]
+    # Verify results aggregation
+    assert len(reviews_map) == 5
+    
+    # Check specific reviews by ID
+    # Review 101: Bus
+    assert reviews_map[101]["Транспорт"] == "отрицательно"
+    
+    # Review 102: Clinic (mixed)
+    assert reviews_map[102]["Здравоохранение"] == "положительно"
+    
+    # Verify ideas aggregation
+    assert "Транспорт" in ideas_map
+    assert ideas_map["Транспорт"][0]["description"] == "Увеличить частоту движения автобуса 55"
+    assert ideas_map["Транспорт"][0]["source_ids"] == [101]
+    
+    assert "ЖКХ" in ideas_map
+    assert ideas_map["ЖКХ"][0]["description"] == "Обеспечить регулярный вывоз мусора по ул. Ленина, 5"
+    assert ideas_map["ЖКХ"][0]["source_ids"] == [105]
 
 @pytest.mark.asyncio
-async def test_predict_empty_reviews(prediction_service):
-    with patch("services.prediction_service.classification_agent") as mock_agent:
-        reviews_map, ideas_map = await prediction_service.predict([])
-        assert reviews_map == {}
-        assert ideas_map == {}
-        mock_agent.ainvoke.assert_not_called()
+async def test_predict_empty_reviews():
+    mock_agent = MagicMock()
+    prediction_service = PredictionService(agent=mock_agent)
+    
+    reviews_map, ideas_map = await prediction_service.predict([])
+    
+    assert reviews_map == {}
+    assert ideas_map == {}
+    mock_agent.ainvoke.assert_not_called()
